@@ -9,6 +9,7 @@ import SocialPage from './pages/SocialPage.jsx';
 import AIPage from './pages/AIPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import NotificationsPage from './pages/NotificationsPage.jsx';
 import { Loading } from './components/Ui.jsx';
 
 function Protected() {
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/ai" element={<AIPage/>}/>
       <Route path="/profile" element={<ProfilePage/>}/>
       <Route path="/settings" element={<SettingsPage/>}/>
+      <Route path="/notifications" element={<NotificationsPage/>}/>
     </Route>
     <Route path="*" element={<Navigate to="/" replace/>}/>
   </Routes>;

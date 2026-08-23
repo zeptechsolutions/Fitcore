@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import WeightLog from '../models/WeightLog.js';
 import { kgToLb, lbToKg, withUserWeightLb } from '../utils/weight.js';
+import { buildPersonalPlan } from '../utils/plan.js';
 
 export async function getMe(req, res) {
   const user = await User.findById(req.user.id);
@@ -9,7 +10,7 @@ export async function getMe(req, res) {
 }
 
 export async function updateMe(req, res) {
-  const allowed = ['name','birthDate','heightCm','avatarId','goal','activityLevel','macroGoals','waterGoalLiters','bottleSizeLiters','weeklyGymGoal','dailyStepGoal','sleepGoalHours','privacy'];
+  const allowed = ['name','birthDate','biologicalSex','heightCm','avatarId','goal','activityLevel','macroGoals','waterGoalLiters','bottleSizeLiters','weeklyGymGoal','dailyStepGoal','sleepGoalHours','privacy'];
   const current = await User.findById(req.user.id);
   const changes = {};
   for (const key of allowed) if (req.body[key] !== undefined) changes[key] = req.body[key];
@@ -42,4 +43,26 @@ export async function getBmi(req, res) {
   if (!weightKg) return res.status(400).json({ message: 'Weight is required to calculate BMI' });
   const bmi = weightKg / ((user.heightCm / 100) ** 2);
   res.json({ weightLb: kgToLb(weightKg), heightCm: user.heightCm, bmi: Number(bmi.toFixed(1)) });
+}
+
+export async function getPersonalPlan(req, res) {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  if (!user.personalizedPlan?.generatedAt) {
+    const plan = buildPersonalPlan(user);
+    user.personalizedPlan = plan;
+    user.macroGoals = { calories: plan.calories, protein: plan.protein, carbs: plan.carbs, fats: plan.fats };
+    await user.save();
+  }
+  res.json(user.personalizedPlan);
+}
+
+export async function recalculatePersonalPlan(req, res) {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  const plan = buildPersonalPlan(user);
+  user.personalizedPlan = plan;
+  if (req.body.applyToMacros !== false) user.macroGoals = { calories: plan.calories, protein: plan.protein, carbs: plan.carbs, fats: plan.fats };
+  await user.save();
+  res.json({ plan: user.personalizedPlan, macroGoals: user.macroGoals });
 }

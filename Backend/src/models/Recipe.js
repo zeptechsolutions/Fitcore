@@ -21,7 +21,8 @@ const recipeSchema = new mongoose.Schema({
     carbs: { type: Number, default: 0 },
     fats: { type: Number, default: 0 }
   },
-  favorite: { type: Boolean, default: false }
+  favorite: { type: Boolean, default: false },
+  aiEstimated: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model('Recipe', recipeSchema);

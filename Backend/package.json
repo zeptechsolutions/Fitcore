@@ -1,7 +1,7 @@
 {
-  "name": "fitcore-backend",
-  "version": "1.0.0",
-  "description": "Backend API for FitCore",
+  "name": "zhealth-backend",
+  "version": "2.1.0",
+  "description": "Zhealth v2.1 - personalized health tracking with Gmail SMTP email workflows, recovery, activity, social, gamification and AI",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -14,6 +14,10 @@
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^9.0.0"
+    "mongoose": "^9.0.0",
+    "nodemailer": "^7.0.6"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

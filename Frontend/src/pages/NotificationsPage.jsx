@@ -1,0 +1,17 @@
+import { useEffect, useState } from 'react';
+import { BellRing, Mail, MoonStar } from 'lucide-react';
+import { endpoints } from '../services/api.js';
+import { Card, ErrorBox, Loading, SectionTitle } from '../components/Ui.jsx';
+
+export default function NotificationsPage(){
+ const [prefs,setPrefs]=useState(null),[error,setError]=useState(''),[saved,setSaved]=useState(false);
+ useEffect(()=>{endpoints.reminderPrefs().then(setPrefs).catch(e=>setError(e.message))},[]);
+ if(!prefs)return <Loading/>;
+ const updateEmail=(key,value)=>setPrefs({...prefs,email:{...(prefs.email||{}),[key]:value}});
+ const save=async()=>{try{setError('');setPrefs(await endpoints.updateReminderPrefs(prefs));setSaved(true);setTimeout(()=>setSaved(false),1500)}catch(e){setError(e.message)}};
+ return <div className="page"><div className="page-heading"><div><span className="eyebrow">Notificaciones</span><h1>Que Zhealth te avise solo de lo que importa.</h1></div></div><ErrorBox message={error}/>
+ <Card><SectionTitle title="Recordatorios en Zhealth" action={<BellRing size={18}/>}/><Toggle label="Activar recordatorios" value={prefs.enabled} onChange={v=>setPrefs({...prefs,enabled:v})}/><Toggle label="Comidas" value={prefs.mealReminder} onChange={v=>setPrefs({...prefs,mealReminder:v})}/><Toggle label="Agua" value={prefs.waterReminder} onChange={v=>setPrefs({...prefs,waterReminder:v})}/><Toggle label="Proteína" value={prefs.proteinReminder} onChange={v=>setPrefs({...prefs,proteinReminder:v})}/><Toggle label="Gym" value={prefs.gymReminder} onChange={v=>setPrefs({...prefs,gymReminder:v})}/><Toggle label="Rachas" value={prefs.streakReminder} onChange={v=>setPrefs({...prefs,streakReminder:v})}/><div className="quiet-hours"><div><MoonStar size={18}/><span>Horas silenciosas</span></div><input type="time" value={prefs.quietHours?.start||'22:00'} onChange={e=>setPrefs({...prefs,quietHours:{...prefs.quietHours,start:e.target.value,enabled:true}})}/><span>—</span><input type="time" value={prefs.quietHours?.end||'07:00'} onChange={e=>setPrefs({...prefs,quietHours:{...prefs.quietHours,end:e.target.value,enabled:true}})}/></div></Card>
+ <Card><SectionTitle title="Correos" action={<Mail size={18}/>}/><p className="muted">Podés apagar cada tipo de correo por separado.</p><Toggle label="Bienvenida al crear cuenta" value={prefs.email?.welcome!==false} onChange={v=>updateEmail('welcome',v)}/><Toggle label="Recordarme si llevo 10+ días inactivo" value={prefs.email?.inactivity!==false} onChange={v=>updateEmail('inactivity',v)}/><Toggle label="Recordatorios de comidas por correo" value={prefs.email?.mealReminder===true} onChange={v=>updateEmail('mealReminder',v)}/><Toggle label="Recordatorios de agua por correo" value={prefs.email?.waterReminder===true} onChange={v=>updateEmail('waterReminder',v)}/><Toggle label="Recordatorios de proteína por correo" value={prefs.email?.proteinReminder===true} onChange={v=>updateEmail('proteinReminder',v)}/><Toggle label="Recordatorios de gym por correo" value={prefs.email?.gymReminder===true} onChange={v=>updateEmail('gymReminder',v)}/><Toggle label="Recordatorios de rachas por correo" value={prefs.email?.streakReminder===true} onChange={v=>updateEmail('streakReminder',v)}/></Card>
+ <button className="btn primary profile-save" onClick={save}>{saved?'Guardado':'Guardar notificaciones'}</button></div>;
+}
+function Toggle({label,value,onChange}){return <label className="toggle-row"><span>{label}</span><input type="checkbox" checked={Boolean(value)} onChange={e=>onChange(e.target.checked)}/><i/></label>}

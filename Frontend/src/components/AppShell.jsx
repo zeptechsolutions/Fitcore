@@ -18,7 +18,7 @@ export default function AppShell() {
     <header className="topbar">
       <button className="brand" onClick={() => navigate('/')}><span className="brand-mark">Z</span><span>Zhealth</span></button>
       <div className="top-actions">
-        <button className="icon-btn notification-btn" onClick={() => navigate('/settings')}><Bell size={20}/>{reminders.length > 0 && <i>{Math.min(reminders.length, 9)}</i>}</button>
+        <button className="icon-btn notification-btn" onClick={() => navigate('/notifications')}><Bell size={20}/>{reminders.length > 0 && <i>{Math.min(reminders.length, 9)}</i>}</button>
         <button className="avatar-btn user-avatar-btn" onClick={() => navigate('/profile')}><img src={avatarUrl(user?.avatarId)} alt="Avatar" /></button>
       </div>
     </header>

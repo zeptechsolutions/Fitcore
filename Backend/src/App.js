@@ -20,7 +20,9 @@ import nutritionRoutes from './routes/nutritionRoutes.js';
 import reminderRoutes from './routes/reminderRoutes.js';
 import activityRoutes from './routes/activityRoutes.js';
 import sleepRoutes from './routes/sleepRoutes.js';
+import systemRoutes from './routes/systemRoutes.js';
 import { rejectUnsafePayload, securityHeaders, simpleRateLimit } from './utils/security.js';
+import { trackHealthRecording } from './utils/activityTracking.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -34,10 +36,11 @@ const allowedOrigins = [...new Set([
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(rejectUnsafePayload);
+app.use(trackHealthRecording);
 app.use('/api', simpleRateLimit({ windowMs: 60_000, max: 180 }));
 app.use('/api/ai', simpleRateLimit({ windowMs: 60_000, max: 25 }));
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'Zhealth API', version: '1.2.0' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'Zhealth API', version: '2.0.0' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/meals', mealRoutes);
@@ -57,6 +60,7 @@ app.use('/api/reminders', reminderRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/sleep', sleepRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/system', systemRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));
 app.use((err, _req, res, _next) => {
