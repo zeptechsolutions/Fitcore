@@ -23,7 +23,15 @@ import { rejectUnsafePayload, securityHeaders, simpleRateLimit } from './utils/s
 const app = express();
 app.disable('x-powered-by');
 app.use(securityHeaders);
-app.use(cors({ origin: config.clientUrl, credentials: true }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://fitcore7.vercel.app',
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(rejectUnsafePayload);
 app.use('/api', simpleRateLimit({ windowMs: 60_000, max: 180 }));
