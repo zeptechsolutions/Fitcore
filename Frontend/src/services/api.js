@@ -12,7 +12,10 @@ export async function api(path, options = {}) {
     const error = new Error(data.message || 'Ocurrió un error');
     error.status = response.status;
     error.data = data;
-    if (response.status === 401) {
+    // Only clear the session when FitCore itself confirms the JWT is missing,
+    // invalid or expired. External services (for example Gemini) can also
+    // return HTTP 401, and those must never log the user out.
+    if (response.status === 401 && ['AUTH_REQUIRED', 'AUTH_INVALID'].includes(data.code)) {
       localStorage.removeItem('fitcore_token');
       localStorage.removeItem('fitcore_user');
       window.dispatchEvent(new Event('fitcore:unauthorized'));

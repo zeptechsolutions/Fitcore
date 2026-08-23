@@ -80,10 +80,27 @@ export async function callStructuredAI({ userId, feature, instructions, input, s
     responsePayload = await response.json();
 
     if (!response.ok) {
-      const message = responsePayload?.error?.message || 'Gemini request failed';
+      const providerMessage = responsePayload?.error?.message || 'Gemini request failed';
+      const providerStatus = responsePayload?.error?.status || 'GEMINI_ERROR';
+
+      // Never expose Gemini's 401/403 as an authentication failure for FitCore.
+      // Otherwise the frontend could mistake a provider/configuration error for
+      // an expired user JWT and log the user out.
+      let statusCode = response.status;
+      let message = providerMessage;
+
+      if (response.status === 401 || response.status === 403) {
+        statusCode = 502;
+        message = `Gemini authentication/configuration error: ${providerMessage}`;
+      } else if (response.status === 404) {
+        statusCode = 502;
+        message = `Gemini model or endpoint unavailable: ${providerMessage}`;
+      }
+
       const error = new Error(message);
-      error.statusCode = response.status;
-      error.code = responsePayload?.error?.status || 'GEMINI_ERROR';
+      error.statusCode = statusCode;
+      error.code = providerStatus;
+      error.providerStatus = response.status;
       throw error;
     }
 
