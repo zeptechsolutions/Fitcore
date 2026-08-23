@@ -1,0 +1,17 @@
+import { useState } from 'react';
+import { ArrowUp, BrainCircuit, CalendarCheck, Lightbulb, Sparkles } from 'lucide-react';
+import { endpoints } from '../services/api.js';
+import { Card, ErrorBox, Loading, Pill, SectionTitle } from '../components/Ui.jsx';
+
+export default function AIPage(){
+ const [question,setQuestion]=useState(''),[answer,setAnswer]=useState(null),[weekly,setWeekly]=useState(null),[patterns,setPatterns]=useState(null),[loading,setLoading]=useState(null),[error,setError]=useState('');
+ const ask=async(e)=>{e.preventDefault();setLoading('ask');setError('');try{setAnswer(await endpoints.askAi(question))}catch(e){setError(e.message)}finally{setLoading(null)}};
+ const loadWeekly=async()=>{setLoading('weekly');setError('');try{setWeekly(await endpoints.aiWeekly())}catch(e){setError(e.message)}finally{setLoading(null)}};
+ const loadPatterns=async()=>{setLoading('patterns');setError('');try{setPatterns(await endpoints.aiPatterns(30))}catch(e){setError(e.message)}finally{setLoading(null)}};
+ return <div className="page"><div className="page-heading"><div><span className="eyebrow">FitCore AI</span><h1>Tus datos, explicados.</h1></div><Pill tone="purple"><Sparkles size={14}/> IA</Pill></div><ErrorBox message={error}/>
+ <Card className="ai-chat-card"><div className="ai-orb"><BrainCircuit size={28}/></div><div><h2>Preguntá sobre tu progreso</h2><p className="muted">La IA solo consulta los datos de tu cuenta que necesita para responder.</p></div><form className="ask-form" onSubmit={ask}><textarea value={question} onChange={e=>setQuestion(e.target.value)} rows="3" placeholder="Ej: ¿Estoy consumiendo más proteína que el mes pasado?"/><button disabled={loading==='ask'||question.length<3}><ArrowUp size={20}/></button></form>{loading==='ask'&&<Loading compact/>}{answer&&<div className="ai-answer"><span className="eyebrow">Respuesta</span><p>{answer.answer?.answer}</p>{answer.answer?.keyValues?.length>0&&<div className="key-values">{answer.answer.keyValues.map((x,i)=><span key={i}><small>{x.label}</small><strong>{x.value}</strong></span>)}</div>}{answer.answer?.limitation&&<small className="fineprint">{answer.answer.limitation}</small>}</div>}</Card>
+ <div className="ai-tools"><button onClick={loadWeekly}><span className="quick-icon purple"><CalendarCheck/></span><div><strong>Resumen semanal</strong><small>Qué salió bien y qué mejorar</small></div></button><button onClick={loadPatterns}><span className="quick-icon yellow"><Lightbulb/></span><div><strong>Detectar patrones</strong><small>Analizar últimos 30 días</small></div></button></div>
+ {loading==='weekly'&&<Loading/>}{weekly&&<AnalysisCard title={weekly.ai?.headline||'Tu semana'} data={weekly.ai}/>} {loading==='patterns'&&<Loading/>}{patterns&&<AnalysisCard title={patterns.ai?.headline||'Patrones detectados'} data={patterns.ai}/>} 
+ </div>;
+}
+function AnalysisCard({title,data}){return <Card className="analysis-card"><SectionTitle title={title}/><p>{data?.summary}</p>{data?.positives?.length>0&&<div><span className="eyebrow green-text">Lo positivo</span><ul>{data.positives.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}{data?.opportunities?.length>0&&<div><span className="eyebrow yellow-text">Oportunidades</span><ul>{data.opportunities.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}{data?.patterns?.length>0&&<div><span className="eyebrow">Patrones</span><ul>{data.patterns.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}</Card>}
