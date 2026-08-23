@@ -19,7 +19,7 @@ export default function AuthPage() {
 
   return <div className="auth-page">
     <div className="auth-hero">
-      <div className="auth-brand"><span className="brand-mark large">F</span><span>FitCore</span></div>
+      <div className="auth-brand"><span className="brand-mark large">Z</span><span>Zhealth</span></div>
       <div className="hero-copy"><span className="eyebrow"><Sparkles size={15}/> Tu progreso, conectado</span><h1>Construí consistencia.<br/><em>Medí el progreso.</em></h1><p>Nutrición, agua, gym y estadísticas en un solo lugar.</p></div>
       <div className="hero-orbit"><Activity/></div>
     </div>

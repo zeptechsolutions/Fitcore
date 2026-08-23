@@ -12,7 +12,7 @@ export async function api(path, options = {}) {
     const error = new Error(data.message || 'Ocurrió un error');
     error.status = response.status;
     error.data = data;
-    // Only clear the session when FitCore itself confirms the JWT is missing,
+    // Only clear the session when Zhealth itself confirms the JWT is missing,
     // invalid or expired. External services (for example Gemini) can also
     // return HTTP 401, and those must never log the user out.
     if (response.status === 401 && ['AUTH_REQUIRED', 'AUTH_INVALID'].includes(data.code)) {
@@ -37,9 +37,16 @@ export const endpoints = {
   deleteMeal: (id) => api(`/meals/${id}`, { method: 'DELETE' }),
   water: (date) => api(`/water${date ? `?date=${date}` : ''}`),
   addWater: (fraction) => api('/water', { method: 'POST', body: JSON.stringify({ bottleFraction: fraction }) }),
+  subtractWater: (fraction) => api('/water/subtract', { method: 'POST', body: JSON.stringify({ bottleFraction: fraction }) }),
   deleteWater: (id) => api(`/water/${id}`, { method: 'DELETE' }),
   weights: () => api('/weights'),
   addWeight: (payload) => api('/weights', { method: 'POST', body: JSON.stringify(payload) }),
+  activity: (date) => api(`/activity${date ? `?date=${date}` : ''}`),
+  addActivity: (payload) => api('/activity', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteActivity: (id) => api(`/activity/${id}`, { method: 'DELETE' }),
+  sleep: (date) => api(`/sleep${date ? `?date=${date}` : ''}`),
+  addSleep: (payload) => api('/sleep', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteSleep: (id) => api(`/sleep/${id}`, { method: 'DELETE' }),
   measurements: () => api('/measurements'),
   addMeasurement: (payload) => api('/measurements', { method: 'POST', body: JSON.stringify(payload) }),
   gym: (date) => api(`/gym${date ? `?date=${date}` : ''}`),

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowUpRight, Droplets, Dumbbell, Flame, Footprints, Sparkles, Target, Utensils, Zap } from 'lucide-react';
+import { ArrowUpRight, Droplets, Dumbbell, Flame, Footprints, Minus, Moon, Sparkles, Target, Utensils, Zap } from 'lucide-react';
 import { endpoints } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Card, ErrorBox, Loading, Pill, Progress, SectionTitle, StatMini } from '../components/Ui.jsx';
@@ -14,9 +14,9 @@ export default function HomePage(){
   const load=useCallback(async()=>{try{setError('');const [d,s,g,r]=await Promise.all([endpoints.dashboard(),endpoints.streaks(),endpoints.gamification(),endpoints.reminders()]);setData(d);setStreaks(s);setGame(g);setReminders(r);}catch(e){setError(e.message);}},[]);
   useEffect(()=>{load();window.addEventListener('fitcore:refresh',load);return()=>window.removeEventListener('fitcore:refresh',load)},[load]);
   if(!data&&!error)return <Loading/>;
-  const totals=data?.nutrition?.totals||{}; const goals=data?.nutrition?.goals||user?.macroGoals||{}; const score=data?.score||0; const water=data?.water?.liters||0;
+  const totals=data?.nutrition?.totals||{}; const goals=data?.nutrition?.goals||user?.macroGoals||{}; const score=data?.score||0; const water=data?.water?.liters||0; const activity=data?.activity||{}; const sleep=data?.sleep||{};
   return <div className="page home-page">
-    <div className="page-greeting"><div><span className="eyebrow">{fullDate()}</span><h1>Hola, {user?.name?.split(' ')[0]} 👋</h1></div><Pill tone="yellow"><Flame size={14}/> {game?.level ? `Nivel ${game.level}`:'FitCore'}</Pill></div>
+    <div className="page-greeting"><div><span className="eyebrow">{fullDate()}</span><h1>Hola, {user?.name?.split(' ')[0]} 👋</h1></div><Pill tone="yellow"><Flame size={14}/> {game?.level ? `Nivel ${game.level}`:'Zhealth'}</Pill></div>
     <ErrorBox message={error}/>
     <Card className="score-card">
       <div className="score-copy"><span>Score de hoy</span><div className="score-number"><strong>{score}</strong><small>/100</small></div><p>{score>=90?'Día excelente.':score>=75?'Vas muy bien.':score>=50?'Buen comienzo.':'Todavía hay día por delante.'}</p></div>
@@ -25,8 +25,8 @@ export default function HomePage(){
     <div className="stat-grid">
       <StatMini icon={Utensils} tone="purple" label="Calorías" value={`${n(totals.calories)} / ${n(goals.calories)}`}/>
       <StatMini icon={Droplets} tone="blue" label="Agua" value={`${n(water,2)} / ${n(user?.waterGoalLiters,1)} L`}/>
-      <StatMini icon={Dumbbell} tone="green" label="Gym semanal" value={`${data?.gym?.completedThisWeek ?? 0} / ${user?.weeklyGymGoal ?? 0}`}/>
-      <StatMini icon={Flame} tone="yellow" label="Racha score" value={`${streaks?.score80Days ?? 0} días`}/>
+      <StatMini icon={Footprints} tone="green" label="Pasos" value={`${n(activity.steps)} / ${n(activity.stepGoal||user?.dailyStepGoal)}`}/>
+      <StatMini icon={Moon} tone="yellow" label="Sueño" value={`${n(sleep.hours,1)} / ${n(sleep.goalHours||user?.sleepGoalHours,1)} h`}/>
     </div>
     <Card>
       <SectionTitle title="Macros de hoy" action={<button className="text-btn" onClick={()=>nav('/nutrition')}>Ver nutrición <ArrowUpRight size={15}/></button>}/>
@@ -37,10 +37,15 @@ export default function HomePage(){
       </div>
     </Card>
     <div className="home-two-col">
-      <Card className="water-card"><div className="card-icon-title"><span className="stat-icon blue"><Droplets size={18}/></span><div><h3>Hidratación</h3><span>{pct(water,user?.waterGoalLiters)}% de tu meta</span></div></div><Progress value={pct(water,user?.waterGoalLiters)} tone="green"/><div className="water-actions">{[[.25,'¼'],[.5,'½'],[1,'+1']].map(([f,l])=><button key={f} onClick={async()=>{await endpoints.addWater(f);load();}}>{l}</button>)}</div></Card>
+      <Card className="water-card"><div className="card-icon-title"><span className="stat-icon blue"><Droplets size={18}/></span><div><h3>Hidratación</h3><span>{pct(water,user?.waterGoalLiters)}% de tu meta</span></div></div><Progress value={pct(water,user?.waterGoalLiters)} tone="green"/><div className="water-actions">{[[.25,'¼'],[.5,'½'],[1,'+1']].map(([f,l])=><button key={`w+${f}`} onClick={async()=>{await endpoints.addWater(f);load();}}>{l}</button>)}</div><div className="water-actions subtract-actions">{[[.25,'¼'],[.5,'½'],[1,'1']].map(([f,l])=><button key={`w-${f}`} className="water-minus" onClick={async()=>{await endpoints.subtractWater(f);load();}}><Minus size={12}/>{l}</button>)}</div></Card>
+      <Card className="activity-card"><div className="card-icon-title"><span className="stat-icon green"><Footprints size={18}/></span><div><h3>Actividad</h3><span>{n(activity.distanceKm,2)} km recorridos</span></div></div><strong>{n(activity.steps)} pasos</strong><Progress value={pct(activity.steps,activity.stepGoal||user?.dailyStepGoal)} tone="green"/><small>Meta: {n(activity.stepGoal||user?.dailyStepGoal)} pasos</small></Card>
+    </div>
+    <div className="home-two-col">
+      <Card className="sleep-card"><div className="card-icon-title"><span className="stat-icon purple"><Moon size={18}/></span><div><h3>Sueño</h3><span>Recuperación diaria</span></div></div><strong>{n(sleep.hours,1)} h</strong><Progress value={pct(sleep.hours,sleep.goalHours||user?.sleepGoalHours)} tone="purple"/><small>Meta: {n(sleep.goalHours||user?.sleepGoalHours,1)} h</small></Card>
       <Card className="xp-card"><div className="card-icon-title"><span className="stat-icon yellow"><Target size={18}/></span><div><h3>XP</h3><span>Nivel {game?.level||1}</span></div></div><strong>{n(game?.xp)} XP</strong><Progress value={game?.nextLevelXp ? ((game.xp/game.nextLevelXp)*100) : 0} tone="yellow"/><small>Próximo nivel: {n(game?.nextLevelXp)} XP</small></Card>
     </div>
+    <Card className="gym-compact"><div className="card-icon-title"><span className="stat-icon green"><Dumbbell size={18}/></span><div><h3>Gym semanal</h3><span>{data?.gym?.completedThisWeek ?? 0} de {user?.weeklyGymGoal ?? 0} entrenamientos</span></div></div><Progress value={pct(data?.gym?.completedThisWeek,user?.weeklyGymGoal)} tone="green"/></Card>
     {reminders.length>0 && <Card className="reminder-card"><SectionTitle title="Para cerrar bien el día"/><div className="reminder-list">{reminders.slice(0,3).map((r,i)=><div key={i}><span className="reminder-dot"/><p>{r.message}</p></div>)}</div></Card>}
-    <button className="ai-banner" onClick={()=>nav('/ai')}><span><Sparkles size={20}/></span><div><strong>FitCore AI</strong><small>Preguntá sobre tu progreso</small></div><ArrowUpRight size={18}/></button>
+    <button className="ai-banner" onClick={()=>nav('/ai')}><span><Sparkles size={20}/></span><div><strong>Zhealth AI</strong><small>Preguntá sobre tu progreso</small></div><ArrowUpRight size={18}/></button>
   </div>;
 }

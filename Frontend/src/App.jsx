@@ -13,7 +13,7 @@ import { Loading } from './components/Ui.jsx';
 
 function Protected() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="splash"><div className="brand-mark large">F</div><Loading/></div>;
+  if (loading) return <div className="splash"><div className="brand-mark large">Z</div><Loading/></div>;
   return user ? <AppShell/> : <Navigate to="/auth" replace/>;
 }
 

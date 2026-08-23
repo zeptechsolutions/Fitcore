@@ -1,26 +1,25 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Utensils, Plus, ChartNoAxesCombined, Users, Bell, UserRound, Droplets, Scale, Dumbbell, Sparkles } from 'lucide-react';
+import { Home, Utensils, Plus, ChartNoAxesCombined, Users, Bell, Droplets, Scale, Dumbbell, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { endpoints } from '../services/api.js';
 import QuickAdd from './QuickAdd.jsx';
-
-const nav = [
-  ['/', Home, 'Inicio'], ['/nutrition', Utensils, 'Nutrición'], ['/progress', ChartNoAxesCombined, 'Progreso'], ['/social', Users, 'Social']
-];
+import { useAuth } from '../context/AuthContext.jsx';
+import { avatarUrl } from '../utils/avatar.js';
 
 export default function AppShell() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [reminders, setReminders] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   useEffect(() => { endpoints.reminders().then(setReminders).catch(() => {}); }, [location.pathname]);
 
   return <div className="app-shell">
     <header className="topbar">
-      <button className="brand" onClick={() => navigate('/')}><span className="brand-mark">F</span><span>FitCore</span></button>
+      <button className="brand" onClick={() => navigate('/')}><span className="brand-mark">Z</span><span>Zhealth</span></button>
       <div className="top-actions">
         <button className="icon-btn notification-btn" onClick={() => navigate('/settings')}><Bell size={20}/>{reminders.length > 0 && <i>{Math.min(reminders.length, 9)}</i>}</button>
-        <button className="avatar-btn" onClick={() => navigate('/profile')}><UserRound size={20}/></button>
+        <button className="avatar-btn user-avatar-btn" onClick={() => navigate('/profile')}><img src={avatarUrl(user?.avatarId)} alt="Avatar" /></button>
       </div>
     </header>
     <main className="main-content"><Outlet /></main>
@@ -37,7 +36,7 @@ export default function AppShell() {
 
 export function QuickActionGrid({ onPick }) {
   const actions = [
-    ['Comida', Utensils, 'purple', 'meal'], ['Agua', Droplets, 'blue', 'water'], ['Peso', Scale, 'green', 'weight'], ['Gym', Dumbbell, 'yellow', 'gym'], ['FitCore AI', Sparkles, 'purple', 'ai']
+    ['Comida', Utensils, 'purple', 'meal'], ['Agua', Droplets, 'blue', 'water'], ['Peso', Scale, 'green', 'weight'], ['Gym', Dumbbell, 'yellow', 'gym'], ['Zhealth AI', Sparkles, 'purple', 'ai']
   ];
   return <div className="quick-grid">{actions.map(([label, Icon, tone, key]) => <button key={key} onClick={() => onPick(key)}><span className={`quick-icon ${tone}`}><Icon size={21}/></span><span>{label}</span></button>)}</div>;
 }
