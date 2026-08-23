@@ -12,13 +12,14 @@ export const config = {
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   aiModel: process.env.AI_MODEL || 'gemini-3.5-flash-lite',
-  openFoodFactsUserAgent: process.env.OPENFOODFACTS_USER_AGENT || 'Zhealth/2.0 (local development)',
+  openFoodFactsUserAgent: process.env.OPENFOODFACTS_USER_AGENT || 'Zhealth/2.2 (local development)',
+
   emailUser: process.env.EMAIL_USER || '',
-  emailPass: process.env.EMAIL_PASS || '',
   emailFrom: process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `Zhealth <${process.env.EMAIL_USER}>` : ''),
-  smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
-  smtpPort: Number(process.env.SMTP_PORT || 465),
-  smtpSecure: String(process.env.SMTP_SECURE || 'true').toLowerCase() === 'true',
+  gmailClientId: process.env.GMAIL_CLIENT_ID || '',
+  gmailClientSecret: process.env.GMAIL_CLIENT_SECRET || '',
+  gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN || '',
+
   appUrl: process.env.APP_URL || process.env.CLIENT_URL || 'http://localhost:5173',
   cronSecret: process.env.CRON_SECRET || ''
 };

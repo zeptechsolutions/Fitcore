@@ -1,38 +1,72 @@
-import nodemailer from 'nodemailer';
 import { config } from '../config.js';
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[c]));
 }
 
-let transporter;
-
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: config.smtpHost,
-      port: config.smtpPort,
-      secure: config.smtpSecure,
-      auth: {
-        user: config.emailUser,
-        pass: config.emailPass,
-      },
-    });
-  }
-  return transporter;
+function sanitizeHeader(value = '') {
+  return String(value).replace(/[\r\n]+/g, ' ').trim();
 }
+
+function encodeHeader(value = '') {
+  const clean = sanitizeHeader(value);
+  return `=?UTF-8?B?${Buffer.from(clean, 'utf8').toString('base64')}?=`;
+}
+
+function toBase64Url(value) {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function buildMimeMessage({ to, subject, html, text }) {
+  const boundary = `zhealth_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const from = sanitizeHeader(config.emailFrom);
+  const recipient = sanitizeHeader(to);
+  const plain = String(text || '').replace(/\r?\n/g, '\r\n');
+  const markup = String(html || '');
+
+  const lines = [
+    `From: ${from}`,
+    `To: ${recipient}`,
+    `Subject: ${encodeHeader(subject)}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    plain,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    markup,
+    '',
+    `--${boundary}--`,
+    ''
+  ];
+
+  return lines.join('\r\n');
+}
+
+let accessTokenCache = null;
 
 export function emailEnabled() {
-  return Boolean(config.emailUser && config.emailPass && config.emailFrom);
+  return Boolean(
+    config.emailUser &&
+    config.emailFrom &&
+    config.gmailClientId &&
+    config.gmailClientSecret &&
+    config.gmailRefreshToken
+  );
 }
 
-export async function verifyEmailConnection() {
-  if (!emailEnabled()) return false;
-  await getTransporter().verify();
-  return true;
-}
-
-export async function sendEmail({ to, subject, html, text }) {
+async function getAccessToken() {
   if (!emailEnabled()) {
     const err = new Error('Email service is not configured');
     err.code = 'EMAIL_NOT_CONFIGURED';
@@ -40,21 +74,91 @@ export async function sendEmail({ to, subject, html, text }) {
     throw err;
   }
 
+  if (accessTokenCache?.token && Date.now() < accessTokenCache.expiresAt) {
+    return accessTokenCache.token;
+  }
+
+  const body = new URLSearchParams({
+    client_id: config.gmailClientId,
+    client_secret: config.gmailClientSecret,
+    refresh_token: config.gmailRefreshToken,
+    grant_type: 'refresh_token'
+  });
+
+  let response;
   try {
-    return await getTransporter().sendMail({
-      from: config.emailFrom,
-      to,
-      subject,
-      html,
-      text,
+    response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(15_000)
     });
   } catch (cause) {
-    const err = new Error(cause?.message || 'Email provider rejected the request');
-    err.code = 'EMAIL_PROVIDER_ERROR';
+    const err = new Error(cause?.message || 'Could not reach Google OAuth');
+    err.code = 'EMAIL_OAUTH_NETWORK_ERROR';
     err.statusCode = 502;
     err.cause = cause;
     throw err;
   }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) {
+    const err = new Error(data.error_description || data.error || 'Google OAuth rejected the refresh token');
+    err.code = 'EMAIL_OAUTH_ERROR';
+    err.statusCode = 502;
+    err.providerStatus = response.status;
+    throw err;
+  }
+
+  const expiresInSeconds = Number(data.expires_in || 3600);
+  accessTokenCache = {
+    token: data.access_token,
+    expiresAt: Date.now() + Math.max(60, expiresInSeconds - 90) * 1000
+  };
+  return accessTokenCache.token;
+}
+
+export async function verifyEmailConnection() {
+  await getAccessToken();
+  return true;
+}
+
+export async function sendEmail({ to, subject, html, text }) {
+  const token = await getAccessToken();
+  const raw = toBase64Url(buildMimeMessage({ to, subject, html, text }));
+
+  let response;
+  try {
+    response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ raw }),
+      signal: AbortSignal.timeout(20_000)
+    });
+  } catch (cause) {
+    const err = new Error(cause?.message || 'Could not reach Gmail API');
+    err.code = 'EMAIL_PROVIDER_NETWORK_ERROR';
+    err.statusCode = 502;
+    err.cause = cause;
+    throw err;
+  }
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    // If Google rejected a cached access token, discard it so the next request refreshes it.
+    if (response.status === 401) accessTokenCache = null;
+    const providerMessage = data?.error?.message || `Gmail API returned ${response.status}`;
+    const err = new Error(providerMessage);
+    err.code = 'EMAIL_PROVIDER_ERROR';
+    err.statusCode = 502;
+    err.providerStatus = response.status;
+    throw err;
+  }
+
+  return data;
 }
 
 export async function sendWelcomeEmail(user) {
