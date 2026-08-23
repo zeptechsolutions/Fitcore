@@ -6,10 +6,13 @@ import WeightLog from '../models/WeightLog.js';
 import MeasurementLog from '../models/MeasurementLog.js';
 import GymLog from '../models/GymLog.js';
 import Meal from '../models/Meal.js';
+import ActivityLog from '../models/ActivityLog.js';
+import SleepLog from '../models/SleepLog.js';
 import { weekRange } from '../utils/date.js';
+import { withWeightLb } from '../utils/weight.js';
 
 function publicUser(user) {
-  return { id: user._id, name: user.name, username: user.username, level: user.level, xp: user.xp };
+  return { id: user._id, name: user.name, username: user.username, level: user.level, xp: user.xp, avatarId: user.avatarId || 1 };
 }
 
 async function acceptedFriendIds(userId) {
@@ -46,7 +49,7 @@ export async function sendFriendRequest(req, res) {
 
 export async function getFriendRequests(req, res) {
   const requests = await Friendship.find({ recipient: req.user.id, status: 'pending' })
-    .populate('requester', 'name username level xp').sort({ createdAt: -1 });
+    .populate('requester', 'name username level xp avatarId').sort({ createdAt: -1 });
   res.json(requests);
 }
 
@@ -90,9 +93,21 @@ export async function getFriendOverview(req, res) {
     data.visible.score = snapshots.length ? Math.round(snapshots.reduce((s, x) => s + Number(x.score || 0), 0) / snapshots.length) : 0;
   }
   if (privacy.gym === 'friends') data.visible.gymThisWeek = await GymLog.countDocuments({ user: user._id, completedAt: { $gte: week.start, $lte: week.end } });
-  if (privacy.weight === 'friends') data.visible.latestWeight = await WeightLog.findOne({ user: user._id }).sort({ loggedAt: -1 }).select('weightKg loggedAt -_id').lean();
+  if (privacy.weight === 'friends') {
+    const latestWeight = await WeightLog.findOne({ user: user._id }).sort({ loggedAt: -1 }).select('weightKg loggedAt -_id').lean();
+    data.visible.latestWeight = withWeightLb(latestWeight);
+  }
   if (privacy.measurements === 'friends') data.visible.latestMeasurements = await MeasurementLog.findOne({ user: user._id }).sort({ loggedAt: -1 }).select('-_id -user -__v').lean();
   if (privacy.meals === 'friends') data.visible.recentMeals = await Meal.find({ user: user._id }).sort({ loggedAt: -1 }).limit(5).select('type title loggedAt -_id').lean();
+  if (privacy.activity === 'friends') {
+    const rows = await ActivityLog.find({ user: user._id, loggedAt: { $gte: week.start, $lte: week.end } }).lean();
+    data.visible.stepsThisWeek = rows.reduce((sum, x) => sum + Number(x.steps || 0), 0);
+    data.visible.distanceKmThisWeek = Number(rows.reduce((sum, x) => sum + Number(x.distanceKm || 0), 0).toFixed(2));
+  }
+  if (privacy.sleep === 'friends') {
+    const rows = await SleepLog.find({ user: user._id, loggedAt: { $gte: week.start, $lte: week.end } }).lean();
+    data.visible.avgSleepHours = rows.length ? Number((rows.reduce((sum, x) => sum + Number(x.hours || 0), 0) / rows.length).toFixed(1)) : 0;
+  }
   if (privacy.macros === 'friends') {
     const latest = await DailySnapshot.findOne({ user: user._id }).sort({ day: -1 }).select('day nutrition -_id').lean();
     data.visible.macros = latest || null;

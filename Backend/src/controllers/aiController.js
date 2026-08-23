@@ -61,7 +61,7 @@ const intentSchema = {
   properties: {
     domains: {
       type: 'array',
-      items: { type: 'string', enum: ['summary', 'score', 'weight', 'water', 'gym', 'meals', 'macros'] }
+      items: { type: 'string', enum: ['summary', 'score', 'weight', 'water', 'gym', 'meals', 'macros', 'activity', 'sleep'] }
     },
     from: { type: ['string', 'null'] },
     to: { type: ['string', 'null'] }
@@ -99,7 +99,7 @@ export async function analyzeMeal(req, res) {
     schemaName: 'fitcore_meal_analysis',
     schema: mealSchema,
     instructions: [
-      'You are FitCore meal parser. Convert a natural-language meal description into an approximate nutrition estimate.',
+      'You are Zhealth meal parser. Convert a natural-language meal description into an approximate nutrition estimate.',
       'Return calories in kcal and protein/carbs/fats in grams.',
       'Use realistic common serving estimates when quantity is vague. Never claim medical precision.',
       'confidence must be between 0 and 1. The disclaimer must clearly say values are estimates and should be reviewed.',
@@ -125,7 +125,7 @@ export async function weeklySummary(req, res) {
     schemaName: 'fitcore_weekly_summary',
     schema: textAnalysisSchema,
     instructions: [
-      'You are FitCore weekly analyst. Explain only what is supported by the supplied fitness tracking data.',
+      'You are Zhealth weekly analyst. Explain only what is supported by the supplied fitness tracking data.',
       'Be concise, encouraging but neutral. Do not diagnose conditions or prescribe medical treatment.',
       'Compare current week with previous week when data exists. If trackedDays is low, explicitly note limited data.',
       'Opportunities must be practical observations based on goal adherence, not medical advice.'
@@ -144,7 +144,7 @@ export async function detectPatterns(req, res) {
     schemaName: 'fitcore_patterns',
     schema: textAnalysisSchema,
     instructions: [
-      'You are FitCore pattern analyst. Identify only patterns that can be directly supported by the provided aggregates.',
+      'You are Zhealth pattern analyst. Identify only patterns that can be directly supported by the provided aggregates.',
       'Do not infer causation from correlation. Do not provide medical diagnoses.',
       'If there is insufficient data, say so. Prefer numeric comparisons when useful.'
     ].join(' '),
@@ -154,7 +154,7 @@ export async function detectPatterns(req, res) {
   res.json({ data: dataset, ai: result });
 }
 
-export async function askFitCore(req, res) {
+export async function askZhealth(req, res) {
   const question = String(req.body.question || '').trim();
   if (question.length < 3) return res.status(400).json({ message: 'Question is required' });
   if (question.length > 1000) return res.status(400).json({ message: 'Question is too long' });
@@ -167,7 +167,7 @@ export async function askFitCore(req, res) {
     schema: intentSchema,
     instructions: [
       `Today is ${today}.`,
-      'Classify which FitCore data domains are needed to answer the question.',
+      'Classify which Zhealth data domains are needed to answer the question.',
       'Resolve relative dates such as this month, last week or three months ago into ISO YYYY-MM-DD boundaries.',
       'Use summary for broad questions. Return at least one domain.'
     ].join(' '),
@@ -183,7 +183,7 @@ export async function askFitCore(req, res) {
     schemaName: 'fitcore_question_answer',
     schema: answerSchema,
     instructions: [
-      'Answer the user question using ONLY the supplied FitCore data.',
+      'Answer the user question using ONLY the supplied Zhealth data.',
       'Never invent missing values. If the data cannot answer the question, state the limitation.',
       'Do not diagnose illness or provide medical treatment. Keep the answer concise and in the same language as the question.'
     ].join(' '),

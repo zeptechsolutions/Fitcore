@@ -3,7 +3,10 @@ import WeightLog from '../models/WeightLog.js';
 import Meal from '../models/Meal.js';
 import GymLog from '../models/GymLog.js';
 import User from '../models/User.js';
+import ActivityLog from '../models/ActivityLog.js';
+import SleepLog from '../models/SleepLog.js';
 import { weekRange } from './date.js';
+import { kgToLb } from './weight.js';
 
 export function monthRange(dateInput = new Date()) {
   const date = new Date(dateInput);
@@ -21,11 +24,13 @@ export function previousRange({ start, end }) {
 }
 
 export async function buildPeriodSummary(userId, range) {
-  const [user, snapshots, weights, gymCount] = await Promise.all([
+  const [user, snapshots, weights, gymCount, activity, sleep] = await Promise.all([
     User.findById(userId).select('macroGoals waterGoalLiters weeklyGymGoal goal'),
     DailySnapshot.find({ user: userId, day: { $gte: range.start, $lte: range.end } }).sort({ day: 1 }).lean(),
     WeightLog.find({ user: userId, loggedAt: { $gte: range.start, $lte: range.end } }).sort({ loggedAt: 1 }).lean(),
-    GymLog.countDocuments({ user: userId, completedAt: { $gte: range.start, $lte: range.end } })
+    GymLog.countDocuments({ user: userId, completedAt: { $gte: range.start, $lte: range.end } }),
+    ActivityLog.find({ user: userId, loggedAt: { $gte: range.start, $lte: range.end } }).lean(),
+    SleepLog.find({ user: userId, loggedAt: { $gte: range.start, $lte: range.end } }).lean()
   ]);
 
   const days = snapshots.length;
@@ -41,11 +46,28 @@ export async function buildPeriodSummary(userId, range) {
     return acc;
   }, { score: 0, calories: 0, protein: 0, carbs: 0, fats: 0, water: 0, proteinGoalDays: 0, waterGoalDays: 0 });
 
+  const activityDays = new Map();
+  for (const row of activity) {
+    const key = new Date(row.loggedAt).toISOString().slice(0, 10);
+    const value = activityDays.get(key) || { steps: 0, distanceKm: 0 };
+    value.steps += row.steps || 0;
+    value.distanceKm += row.distanceKm || 0;
+    activityDays.set(key, value);
+  }
+  const sleepDays = new Map();
+  for (const row of sleep) {
+    const key = new Date(row.loggedAt).toISOString().slice(0, 10);
+    sleepDays.set(key, (sleepDays.get(key) || 0) + (row.hours || 0));
+  }
+  const totalSteps = [...activityDays.values()].reduce((sum, x) => sum + x.steps, 0);
+  const totalDistanceKm = [...activityDays.values()].reduce((sum, x) => sum + x.distanceKm, 0);
+  const totalSleepHours = [...sleepDays.values()].reduce((sum, x) => sum + x, 0);
+
   const avg = (number) => days ? Number((number / days).toFixed(1)) : 0;
   const weight = weights.length ? {
-    firstKg: weights[0].weightKg,
-    lastKg: weights.at(-1).weightKg,
-    changeKg: Number((weights.at(-1).weightKg - weights[0].weightKg).toFixed(2))
+    firstLb: kgToLb(weights[0].weightKg),
+    lastLb: kgToLb(weights.at(-1).weightKg),
+    changeLb: kgToLb(weights.at(-1).weightKg - weights[0].weightKg, 2)
   } : null;
 
   return {
@@ -56,7 +78,9 @@ export async function buildPeriodSummary(userId, range) {
       physicalGoal: user.goal,
       macros: user.macroGoals,
       waterLiters: user.waterGoalLiters,
-      weeklyGym: user.weeklyGymGoal
+      weeklyGym: user.weeklyGymGoal,
+      dailySteps: user.dailyStepGoal || 10000,
+      sleepHours: user.sleepGoalHours || 8
     } : null,
     averages: {
       score: avg(sums.score),
@@ -64,12 +88,17 @@ export async function buildPeriodSummary(userId, range) {
       protein: avg(sums.protein),
       carbs: avg(sums.carbs),
       fats: avg(sums.fats),
-      waterLiters: avg(sums.water)
+      waterLiters: avg(sums.water),
+      steps: activityDays.size ? Math.round(totalSteps / activityDays.size) : 0,
+      distanceKm: activityDays.size ? Number((totalDistanceKm / activityDays.size).toFixed(2)) : 0,
+      sleepHours: sleepDays.size ? Number((totalSleepHours / sleepDays.size).toFixed(2)) : 0
     },
     completions: {
       proteinGoalDays: sums.proteinGoalDays,
       waterGoalDays: sums.waterGoalDays,
-      gymSessions: gymCount
+      gymSessions: gymCount,
+      stepGoalDays: [...activityDays.values()].filter(x => x.steps >= (user?.dailyStepGoal || 10000)).length,
+      sleepGoalDays: [...sleepDays.values()].filter(x => x >= (user?.sleepGoalHours || 8) * 0.95).length
     },
     weight
   };
@@ -82,9 +111,11 @@ export async function buildPatternDataset(userId, days = 30) {
   start.setDate(start.getDate() - (safeDays - 1));
   start.setHours(0, 0, 0, 0);
 
-  const [snapshots, weights] = await Promise.all([
+  const [snapshots, weights, activity, sleep] = await Promise.all([
     DailySnapshot.find({ user: userId, day: { $gte: start, $lte: end } }).sort({ day: 1 }).lean(),
-    WeightLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: 1 }).lean()
+    WeightLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: 1 }).lean(),
+    ActivityLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: 1 }).lean(),
+    SleepLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: 1 }).lean()
   ]);
 
   const weekday = {};
@@ -126,10 +157,17 @@ export async function buildPatternDataset(userId, days = 30) {
       avgWaterGym: avgRows(gymRows, x => x.waterLiters || 0),
       avgWaterRest: avgRows(restRows, x => x.waterLiters || 0)
     },
+    activityRecovery: {
+      totalSteps: activity.reduce((sum, x) => sum + (x.steps || 0), 0),
+      totalDistanceKm: Number(activity.reduce((sum, x) => sum + (x.distanceKm || 0), 0).toFixed(2)),
+      totalSleepHours: Number(sleep.reduce((sum, x) => sum + (x.hours || 0), 0).toFixed(2)),
+      activityLogs: activity.length,
+      sleepLogs: sleep.length
+    },
     weight: weights.length >= 2 ? {
-      firstKg: weights[0].weightKg,
-      lastKg: weights.at(-1).weightKg,
-      changeKg: Number((weights.at(-1).weightKg - weights[0].weightKg).toFixed(2))
+      firstLb: kgToLb(weights[0].weightKg),
+      lastLb: kgToLb(weights.at(-1).weightKg),
+      changeLb: kgToLb(weights.at(-1).weightKg - weights[0].weightKg, 2)
     } : null
   };
 }
@@ -148,17 +186,25 @@ export async function buildQuestionContext(userId, intent) {
   const domains = new Set(intent.domains || []);
   const context = { period: { from: start.toISOString(), to: end.toISOString() } };
 
-  if (domains.has('summary') || domains.has('score') || domains.has('water') || domains.has('gym')) {
+  if (domains.has('summary') || domains.has('score') || domains.has('water') || domains.has('gym') || domains.has('activity') || domains.has('sleep')) {
     context.summary = await buildPeriodSummary(userId, { start, end });
   }
   if (domains.has('weight')) {
-    context.weights = await WeightLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
-      .sort({ loggedAt: 1 }).select('weightKg loggedAt -_id').lean();
+    context.weights = (await WeightLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
+      .sort({ loggedAt: 1 }).select('weightKg loggedAt -_id').lean()).map((row) => ({ weightLb: kgToLb(row.weightKg), loggedAt: row.loggedAt }));
   }
   if (domains.has('meals') || domains.has('macros')) {
     const meals = await Meal.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
       .sort({ loggedAt: 1 }).select('type title description totals loggedAt -_id').lean();
     context.meals = meals.slice(-200);
+  }
+  if (domains.has('activity')) {
+    context.activity = await ActivityLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
+      .sort({ loggedAt: 1 }).select('steps distanceKm loggedAt -_id').lean();
+  }
+  if (domains.has('sleep')) {
+    context.sleep = await SleepLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
+      .sort({ loggedAt: 1 }).select('hours sleptAt wokeAt loggedAt -_id').lean();
   }
   if (domains.has('gym')) {
     context.gym = await GymLog.find({ user: userId, completedAt: { $gte: start, $lte: end } })

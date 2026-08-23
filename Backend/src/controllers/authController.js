@@ -2,13 +2,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { config } from '../config.js';
+import { withUserWeightLb } from '../utils/weight.js';
 
 function tokenFor(user) {
   return jwt.sign({ sub: user._id.toString() }, config.jwtSecret, { expiresIn: '7d' });
 }
 
 function safeUser(user) {
-  const value = user.toObject ? user.toObject() : { ...user };
+  const value = withUserWeightLb(user);
   delete value.passwordHash;
   return value;
 }

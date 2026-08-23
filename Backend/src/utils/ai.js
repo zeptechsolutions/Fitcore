@@ -83,7 +83,7 @@ export async function callStructuredAI({ userId, feature, instructions, input, s
       const providerMessage = responsePayload?.error?.message || 'Gemini request failed';
       const providerStatus = responsePayload?.error?.status || 'GEMINI_ERROR';
 
-      // Never expose Gemini's 401/403 as an authentication failure for FitCore.
+      // Never expose Gemini's 401/403 as an authentication failure for Zhealth.
       // Otherwise the frontend could mistake a provider/configuration error for
       // an expired user JWT and log the user out.
       let statusCode = response.status;

@@ -11,6 +11,6 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  aiModel: process.env.AI_MODEL || 'gemini-2.5-flash-lite',
-  openFoodFactsUserAgent: process.env.OPENFOODFACTS_USER_AGENT || 'FitCore/1.0 (local development)'
+  aiModel: process.env.AI_MODEL || 'gemini-3.5-flash-lite',
+  openFoodFactsUserAgent: process.env.OPENFOODFACTS_USER_AGENT || 'Zhealth/1.0 (local development)'
 };

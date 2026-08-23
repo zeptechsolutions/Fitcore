@@ -26,13 +26,13 @@ export async function createChallenge(req, res) {
   const end = new Date(endDate);
   const status = now < start ? 'upcoming' : now > end ? 'completed' : 'active';
   const challenge = await Challenge.create({ creator: req.user.id, name, type, target, startDate, endDate, participants, status });
-  res.status(201).json(await challenge.populate('participants.user', 'name username level'));
+  res.status(201).json(await challenge.populate('participants.user', 'name username level avatarId'));
 }
 
 export async function getChallenges(req, res) {
   const rows = await Challenge.find({ 'participants.user': req.user.id })
     .populate('creator', 'name username')
-    .populate('participants.user', 'name username level')
+    .populate('participants.user', 'name username level avatarId')
     .sort({ startDate: -1 });
   res.json(rows);
 }
@@ -48,7 +48,7 @@ export async function updateChallengeProgress(req, res) {
   participant.completed = progress >= challenge.target;
   await challenge.save();
   if (!wasCompleted && participant.completed) await awardXp(req.user.id, 50);
-  res.json(await challenge.populate('participants.user', 'name username level'));
+  res.json(await challenge.populate('participants.user', 'name username level avatarId'));
 }
 
 export async function cancelChallenge(req, res) {

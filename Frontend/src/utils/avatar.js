@@ -1,6 +1,10 @@
-export const AVATARS = [1,2,3,4,5].map((id) => ({
-  id,
-  url: `https://api.dicebear.com/10.x/lorelei/svg?seed=Zhealth-${id}`
+const seeds = ['Zed', 'Mochi', 'Nova', 'Pixel', 'Lumi'];
+
+export const AVATARS = seeds.map((seed, index) => ({
+  id: index + 1,
+  label: seed,
+  // DiceBear Clay: soft, playful 3D-like avatars served as SVG.
+  url: `https://api.dicebear.com/10.x/clay/svg?seed=${encodeURIComponent(seed)}`
 }));
 
 export function avatarUrl(id = 1) {

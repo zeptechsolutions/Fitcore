@@ -25,3 +25,36 @@ export async function deleteWater(req, res) {
   if (!log) return res.status(404).json({ message: 'Water log not found' });
   res.status(204).end();
 }
+
+export async function subtractWater(req, res) {
+  const fraction = Number(req.body.bottleFraction);
+  if (![0.25, 0.5, 1].includes(fraction)) return res.status(400).json({ message: 'bottleFraction must be 0.25, 0.5 or 1' });
+  const user = await User.findById(req.user.id);
+  const targetLiters = fraction * Number(user.bottleSizeLiters || 1);
+  const { start, end } = dayRange(req.body.date || new Date());
+  const logs = await WaterLog.find({ user: req.user.id, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: -1 });
+
+  let remaining = targetLiters;
+  for (const log of logs) {
+    if (remaining <= 0.0001) break;
+    if (log.liters <= remaining + 0.0001) {
+      remaining -= log.liters;
+      await WaterLog.deleteOne({ _id: log._id, user: req.user.id });
+    } else {
+      const newLiters = Number((log.liters - remaining).toFixed(3));
+      const newFraction = Number((newLiters / log.bottleSizeLiters).toFixed(2));
+      if (![0.25, 0.5, 0.75, 1].includes(newFraction)) {
+        await WaterLog.deleteOne({ _id: log._id, user: req.user.id });
+      } else {
+        log.liters = newLiters;
+        log.bottleFraction = newFraction;
+        await log.save();
+      }
+      remaining = 0;
+    }
+  }
+
+  const fresh = await WaterLog.find({ user: req.user.id, loggedAt: { $gte: start, $lte: end } }).sort({ loggedAt: 1 });
+  const liters = fresh.reduce((sum, log) => sum + log.liters, 0);
+  res.json({ liters: Number(liters.toFixed(3)), logs: fresh });
+}

@@ -14,7 +14,9 @@ const privacySchema = new mongoose.Schema({
   meals: { type: String, enum: ['private', 'friends'], default: 'private' },
   score: { type: String, enum: ['private', 'friends'], default: 'friends' },
   gym: { type: String, enum: ['private', 'friends'], default: 'friends' },
-  streaks: { type: String, enum: ['private', 'friends'], default: 'friends' }
+  streaks: { type: String, enum: ['private', 'friends'], default: 'friends' },
+  activity: { type: String, enum: ['private', 'friends'], default: 'friends' },
+  sleep: { type: String, enum: ['private', 'friends'], default: 'private' }
 }, { _id: false });
 
 
@@ -41,6 +43,8 @@ const userSchema = new mongoose.Schema({
   heightCm: { type: Number, min: 50, max: 260 },
   startingWeightKg: { type: Number, min: 20, max: 500 },
   targetWeightKg: { type: Number, min: 20, max: 500 },
+  currentWeightKg: { type: Number, min: 20, max: 500 },
+  avatarId: { type: Number, min: 1, max: 5, default: 1 },
   goal: {
     type: String,
     enum: ['gain', 'lose', 'maintain', 'recomp', 'tracking'],
@@ -55,6 +59,8 @@ const userSchema = new mongoose.Schema({
   waterGoalLiters: { type: Number, default: 2.5, min: 0 },
   bottleSizeLiters: { type: Number, default: 1, min: 0.05 },
   weeklyGymGoal: { type: Number, default: 3, min: 0, max: 14 },
+  dailyStepGoal: { type: Number, default: 10000, min: 0, max: 100000 },
+  sleepGoalHours: { type: Number, default: 8, min: 0, max: 24 },
   xp: { type: Number, default: 0, min: 0 },
   level: { type: Number, default: 1, min: 1 },
   privacy: { type: privacySchema, default: () => ({}) },

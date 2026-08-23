@@ -18,26 +18,26 @@ import aiRoutes from './routes/aiRoutes.js';
 import favoriteRoutes from './routes/favoriteRoutes.js';
 import nutritionRoutes from './routes/nutritionRoutes.js';
 import reminderRoutes from './routes/reminderRoutes.js';
+import activityRoutes from './routes/activityRoutes.js';
+import sleepRoutes from './routes/sleepRoutes.js';
 import { rejectUnsafePayload, securityHeaders, simpleRateLimit } from './utils/security.js';
 
 const app = express();
 app.disable('x-powered-by');
 app.use(securityHeaders);
-const allowedOrigins = [
+const allowedOrigins = [...new Set([
   'http://localhost:5173',
   'https://fitcore7.vercel.app',
-];
+  config.clientUrl
+].filter(Boolean))];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(rejectUnsafePayload);
 app.use('/api', simpleRateLimit({ windowMs: 60_000, max: 180 }));
 app.use('/api/ai', simpleRateLimit({ windowMs: 60_000, max: 25 }));
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'FitCore API', version: '1.0.0' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'Zhealth API', version: '1.2.0' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/meals', mealRoutes);
@@ -54,6 +54,8 @@ app.use('/api/social', socialRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/reminders', reminderRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/sleep', sleepRoutes);
 app.use('/api/ai', aiRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Route not found' }));

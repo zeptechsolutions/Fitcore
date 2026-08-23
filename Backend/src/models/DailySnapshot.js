@@ -13,10 +13,15 @@ const dailySnapshotSchema = new mongoose.Schema({
   score: { type: Number, min: 0, max: 100, required: true },
   nutrition: { type: macroSchema, default: () => ({}) },
   waterLiters: { type: Number, default: 0 },
+  steps: { type: Number, default: 0 },
+  distanceKm: { type: Number, default: 0 },
+  sleepHours: { type: Number, default: 0 },
   gymDone: { type: Boolean, default: false },
   mealCount: { type: Number, default: 0 },
   proteinGoalMet: { type: Boolean, default: false },
-  waterGoalMet: { type: Boolean, default: false }
+  waterGoalMet: { type: Boolean, default: false },
+  stepGoalMet: { type: Boolean, default: false },
+  sleepGoalMet: { type: Boolean, default: false }
 }, { timestamps: true });
 
 dailySnapshotSchema.index({ user: 1, day: 1 }, { unique: true });
