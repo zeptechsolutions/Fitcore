@@ -69,10 +69,10 @@ const userSchema = new mongoose.Schema({
   },
   macroGoals: { type: macroGoalsSchema, default: () => ({}) },
   waterGoalLiters: { type: Number, default: 2.5, min: 0 },
-  bottleSizeLiters: { type: Number, default: 1, min: 0.05 },
-  weeklyGymGoal: { type: Number, default: 3, min: 0, max: 14 },
-  dailyStepGoal: { type: Number, default: 10000, min: 0, max: 100000 },
+  weeklyGymGoal: { type: Number, default: 3, min: 0, max: 7 },
+  dailyDistanceGoalMeters: { type: Number, default: 5000, min: 0, max: 300000 },
   sleepGoalHours: { type: Number, default: 8, min: 0, max: 24 },
+  onboardingCompleted: { type: Boolean, default: true },
   personalizedPlan: {
     generatedAt: Date, strategy: String, bmr: Number, estimatedTdee: Number, calories: Number, protein: Number, carbs: Number, fats: Number, estimatedWeeklyChangeLb: Number, targetDifferenceLb: Number, estimatedWeeksToTarget: Number,
     assumptions: { type: [String], default: [] }, inputs: { type: mongoose.Schema.Types.Mixed, default: {} }

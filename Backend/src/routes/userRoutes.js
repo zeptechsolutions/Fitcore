@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { requireAuth } from '../utils/auth.js';
-import { getBmi, getMe, updateMe, getPersonalPlan, recalculatePersonalPlan } from '../controllers/userController.js';
+import { getBmi, getMe, updateMe, getPersonalPlan, recalculatePersonalPlan, changePassword } from '../controllers/userController.js';
 
 const router = Router();
 router.use(requireAuth);
 router.get('/me', asyncHandler(getMe));
 router.patch('/me', asyncHandler(updateMe));
+router.patch('/me/password', asyncHandler(changePassword));
 router.get('/me/bmi', asyncHandler(getBmi));
 router.get('/me/plan', asyncHandler(getPersonalPlan));
 router.post('/me/plan/recalculate', asyncHandler(recalculatePersonalPlan));

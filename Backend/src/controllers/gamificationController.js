@@ -16,7 +16,7 @@ const badges = [
   { key:'gym_50', name:'Gym Rat', icon:'🏋️', description:'Completa 50 entrenamientos.' },
   { key:'chef_10', name:'Chef', icon:'👨‍🍳', description:'Crea 10 recetas.' },
   { key:'elite_7', name:'Elite', icon:'⭐', description:'Consigue score 90+ en 7 días.' },
-  { key:'steps_10k_10', name:'10K Club', icon:'👟', description:'Alcanza 10,000 pasos en 10 días.' },
+  { key:'meters_5k_10', name:'5K Club', icon:'👟', description:'Recorre al menos 5,000 metros en 10 días.' },
   { key:'walker_100', name:'Walker', icon:'🗺️', description:'Acumula 100 km caminados.' },
   { key:'sleep_7', name:'Sleep Master', icon:'🌙', description:'Cumple tu meta de sueño 7 días.' }
 ];
@@ -44,10 +44,10 @@ export async function getGamification(req, res) {
   if (gymCount >= 50) earned.add('gym_50');
   if (recipeCount >= 10) earned.add('chef_10');
   if (eliteDays >= 7) earned.add('elite_7');
-  const tenKDays = activity.filter(x => Number(x.steps || 0) >= 10000).length;
-  const distanceTotal = activity.reduce((sum, x) => sum + Number(x.distanceKm || 0), 0);
+  const fiveKDays = activity.filter(x => (Number.isFinite(Number(x.distanceMeters)) ? Number(x.distanceMeters) : Number(x.distanceKm || 0) * 1000) >= 5000).length;
+  const distanceTotal = activity.reduce((sum, x) => sum + (Number.isFinite(Number(x.distanceMeters)) ? Number(x.distanceMeters) : Number(x.distanceKm || 0) * 1000), 0) / 1000;
   const sleepGoalDays = sleep.filter(x => Number(x.hours || 0) >= Number(user.sleepGoalHours || 8) * 0.95).length;
-  if (tenKDays >= 10) earned.add('steps_10k_10');
+  if (fiveKDays >= 10) earned.add('meters_5k_10');
   if (distanceTotal >= 100) earned.add('walker_100');
   if (sleepGoalDays >= 7) earned.add('sleep_7');
 

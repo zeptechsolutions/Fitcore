@@ -25,7 +25,7 @@ export function previousRange({ start, end }) {
 
 export async function buildPeriodSummary(userId, range) {
   const [user, snapshots, weights, gymCount, activity, sleep] = await Promise.all([
-    User.findById(userId).select('macroGoals waterGoalLiters weeklyGymGoal goal'),
+    User.findById(userId).select('macroGoals waterGoalLiters weeklyGymGoal goal dailyDistanceGoalMeters sleepGoalHours'),
     DailySnapshot.find({ user: userId, day: { $gte: range.start, $lte: range.end } }).sort({ day: 1 }).lean(),
     WeightLog.find({ user: userId, loggedAt: { $gte: range.start, $lte: range.end } }).sort({ loggedAt: 1 }).lean(),
     GymLog.countDocuments({ user: userId, completedAt: { $gte: range.start, $lte: range.end } }),
@@ -49,9 +49,8 @@ export async function buildPeriodSummary(userId, range) {
   const activityDays = new Map();
   for (const row of activity) {
     const key = new Date(row.loggedAt).toISOString().slice(0, 10);
-    const value = activityDays.get(key) || { steps: 0, distanceKm: 0 };
-    value.steps += row.steps || 0;
-    value.distanceKm += row.distanceKm || 0;
+    const value = activityDays.get(key) || { meters: 0 };
+    value.meters += Number.isFinite(Number(row.distanceMeters)) ? Number(row.distanceMeters) : Number(row.distanceKm || 0) * 1000;
     activityDays.set(key, value);
   }
   const sleepDays = new Map();
@@ -59,8 +58,7 @@ export async function buildPeriodSummary(userId, range) {
     const key = new Date(row.loggedAt).toISOString().slice(0, 10);
     sleepDays.set(key, (sleepDays.get(key) || 0) + (row.hours || 0));
   }
-  const totalSteps = [...activityDays.values()].reduce((sum, x) => sum + x.steps, 0);
-  const totalDistanceKm = [...activityDays.values()].reduce((sum, x) => sum + x.distanceKm, 0);
+  const totalMeters = [...activityDays.values()].reduce((sum, x) => sum + x.meters, 0);
   const totalSleepHours = [...sleepDays.values()].reduce((sum, x) => sum + x, 0);
 
   const avg = (number) => days ? Number((number / days).toFixed(1)) : 0;
@@ -79,7 +77,7 @@ export async function buildPeriodSummary(userId, range) {
       macros: user.macroGoals,
       waterLiters: user.waterGoalLiters,
       weeklyGym: user.weeklyGymGoal,
-      dailySteps: user.dailyStepGoal || 10000,
+      dailyDistanceMeters: user.dailyDistanceGoalMeters || 5000,
       sleepHours: user.sleepGoalHours || 8
     } : null,
     averages: {
@@ -89,15 +87,15 @@ export async function buildPeriodSummary(userId, range) {
       carbs: avg(sums.carbs),
       fats: avg(sums.fats),
       waterLiters: avg(sums.water),
-      steps: activityDays.size ? Math.round(totalSteps / activityDays.size) : 0,
-      distanceKm: activityDays.size ? Number((totalDistanceKm / activityDays.size).toFixed(2)) : 0,
+      distanceMeters: activityDays.size ? Math.round(totalMeters / activityDays.size) : 0,
+      distanceKm: activityDays.size ? Number((totalMeters / activityDays.size / 1000).toFixed(2)) : 0,
       sleepHours: sleepDays.size ? Number((totalSleepHours / sleepDays.size).toFixed(2)) : 0
     },
     completions: {
       proteinGoalDays: sums.proteinGoalDays,
       waterGoalDays: sums.waterGoalDays,
       gymSessions: gymCount,
-      stepGoalDays: [...activityDays.values()].filter(x => x.steps >= (user?.dailyStepGoal || 10000)).length,
+      distanceGoalDays: [...activityDays.values()].filter(x => x.meters >= (user?.dailyDistanceGoalMeters || 5000)).length,
       sleepGoalDays: [...sleepDays.values()].filter(x => x >= (user?.sleepGoalHours || 8) * 0.95).length
     },
     weight
@@ -158,8 +156,8 @@ export async function buildPatternDataset(userId, days = 30) {
       avgWaterRest: avgRows(restRows, x => x.waterLiters || 0)
     },
     activityRecovery: {
-      totalSteps: activity.reduce((sum, x) => sum + (x.steps || 0), 0),
-      totalDistanceKm: Number(activity.reduce((sum, x) => sum + (x.distanceKm || 0), 0).toFixed(2)),
+      totalDistanceMeters: Math.round(activity.reduce((sum, x) => sum + (Number.isFinite(Number(x.distanceMeters)) ? Number(x.distanceMeters) : Number(x.distanceKm || 0) * 1000), 0)),
+      totalDistanceKm: Number((activity.reduce((sum, x) => sum + (Number.isFinite(Number(x.distanceMeters)) ? Number(x.distanceMeters) : Number(x.distanceKm || 0) * 1000), 0) / 1000).toFixed(2)),
       totalSleepHours: Number(sleep.reduce((sum, x) => sum + (x.hours || 0), 0).toFixed(2)),
       activityLogs: activity.length,
       sleepLogs: sleep.length
@@ -200,7 +198,7 @@ export async function buildQuestionContext(userId, intent) {
   }
   if (domains.has('activity')) {
     context.activity = await ActivityLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })
-      .sort({ loggedAt: 1 }).select('steps distanceKm loggedAt -_id').lean();
+      .sort({ loggedAt: 1 }).select('distanceMeters distanceKm loggedAt -_id').lean();
   }
   if (domains.has('sleep')) {
     context.sleep = await SleepLog.find({ user: userId, loggedAt: { $gte: start, $lte: end } })

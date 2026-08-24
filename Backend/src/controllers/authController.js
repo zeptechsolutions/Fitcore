@@ -39,28 +39,12 @@ export async function register(req, res) {
   if (exists) return res.status(409).json({ message: 'Email or username already exists' });
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const userData = {
+  const user = await User.create({
     name, username, email, passwordHash,
-    birthDate: req.body.birthDate || undefined,
-    biologicalSex: req.body.biologicalSex || 'unspecified',
-    heightCm: Number(req.body.heightCm) || undefined,
-    currentWeightKg: req.body.currentWeightLb ? lbToKg(req.body.currentWeightLb) : undefined,
-    startingWeightKg: req.body.currentWeightLb ? lbToKg(req.body.currentWeightLb) : undefined,
-    targetWeightKg: req.body.targetWeightLb ? lbToKg(req.body.targetWeightLb) : undefined,
-    goal: req.body.goal || 'tracking',
-    activityLevel: req.body.activityLevel || 'moderate',
-    weeklyGymGoal: Number(req.body.weeklyGymGoal) || 3,
     lastLoginAt: new Date(),
-    lastRecordAt: new Date()
-  };
-
-  try {
-    const plan = buildPersonalPlan(userData);
-    userData.personalizedPlan = plan;
-    userData.macroGoals = { calories: plan.calories, protein: plan.protein, carbs: plan.carbs, fats: plan.fats };
-  } catch { /* Profile can be completed later. */ }
-
-  const user = await User.create(userData);
+    lastRecordAt: new Date(),
+    onboardingCompleted: false
+  });
   if (emailEnabled() && user.notificationPreferences?.email?.welcome !== false) {
     sendWelcomeEmail(user).catch(err => console.error('Welcome email failed:', err.message));
   }

@@ -101,8 +101,8 @@ export async function getFriendOverview(req, res) {
   if (privacy.meals === 'friends') data.visible.recentMeals = await Meal.find({ user: user._id }).sort({ loggedAt: -1 }).limit(5).select('type title loggedAt -_id').lean();
   if (privacy.activity === 'friends') {
     const rows = await ActivityLog.find({ user: user._id, loggedAt: { $gte: week.start, $lte: week.end } }).lean();
-    data.visible.stepsThisWeek = rows.reduce((sum, x) => sum + Number(x.steps || 0), 0);
-    data.visible.distanceKmThisWeek = Number(rows.reduce((sum, x) => sum + Number(x.distanceKm || 0), 0).toFixed(2));
+    data.visible.distanceMetersThisWeek = Math.round(rows.reduce((sum, x) => sum + (Number.isFinite(Number(x.distanceMeters)) ? Number(x.distanceMeters) : Number(x.distanceKm || 0) * 1000), 0));
+    data.visible.distanceKmThisWeek = Number((data.visible.distanceMetersThisWeek / 1000).toFixed(2));
   }
   if (privacy.sleep === 'friends') {
     const rows = await SleepLog.find({ user: user._id, loggedAt: { $gte: week.start, $lte: week.end } }).lean();

@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Eye, LockKeyhole } from 'lucide-react';
+import { Bell, Eye, KeyRound, LockKeyhole, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { endpoints } from '../services/api.js';
-import { Card, ErrorBox, SectionTitle } from '../components/Ui.jsx';
+import { Card, ErrorBox, SectionTitle, SuccessAlert } from '../components/Ui.jsx';
+import { useNavigate } from 'react-router-dom';
 
-const privacyLabels={weight:'Peso',measurements:'Medidas corporales',macros:'Macros',meals:'Comidas',score:'Score',gym:'Gym',streaks:'Rachas',activity:'Pasos y distancia',sleep:'Sueño'};
+const privacyLabels={weight:'Peso',measurements:'Medidas corporales',macros:'Macros',meals:'Comidas',score:'Score',gym:'Gym',streaks:'Rachas',activity:'Recorrido',sleep:'Sueño'};
 export default function SettingsPage(){
-  const {user,refreshUser}=useAuth();
-  const [privacy,setPrivacy]=useState(user.privacy||{}),[error,setError]=useState(''),[saved,setSaved]=useState(false);
-  const savePrivacy=async()=>{try{setError('');await endpoints.updateMe({privacy});await refreshUser();setSaved(true);setTimeout(()=>setSaved(false),1500)}catch(e){setError(e.message)}};
-  return <div className="page"><div className="page-heading"><div><span className="eyebrow">Configuración</span><h1>Tu privacidad, bajo tu control.</h1><p className="muted">Elegí exactamente qué pueden ver tus amigos. El resto permanece privado.</p></div></div><ErrorBox message={error}/>
-  <Card><SectionTitle title="Privacidad" action={<LockKeyhole size={18}/>}/><div className="settings-list">{Object.entries(privacyLabels).map(([key,label])=><div key={key}><div><Eye size={18}/><span>{label}</span></div><select value={privacy[key]||'private'} onChange={e=>setPrivacy({...privacy,[key]:e.target.value})}><option value="private">Solo yo</option><option value="friends">Mis amigos</option></select></div>)}</div><button className="btn secondary" onClick={savePrivacy}>{saved?'Privacidad guardada':'Guardar privacidad'}</button></Card>
-  </div>;
+ const {user,refreshUser,logout}=useAuth();const nav=useNavigate();const [privacy,setPrivacy]=useState(user.privacy||{}),[error,setError]=useState(''),[success,setSuccess]=useState(''),[password,setPassword]=useState({currentPassword:'',newPassword:''}),[busy,setBusy]=useState(false);
+ const savePrivacy=async()=>{try{setError('');await endpoints.updateMe({privacy});await refreshUser();setSuccess('La privacidad de tu cuenta se actualizó correctamente.')}catch(e){setError(e.message)}};
+ const changePassword=async e=>{e.preventDefault();setBusy(true);setError('');try{await endpoints.changePassword(password);setPassword({currentPassword:'',newPassword:''});setSuccess('Tu contraseña fue actualizada correctamente.')}catch(e){setError(e.message)}finally{setBusy(false)}};
+ return <div className="page"><div className="page-heading"><div><span className="eyebrow">Configuración</span><h1>Configuración y cuenta.</h1><p className="muted">Privacidad, seguridad, notificaciones y accesos de tu cuenta.</p></div></div><ErrorBox message={error}/>
+ <Card><SectionTitle title="Cuenta" action={<UserRound size={18}/>}/><div className="account-info-grid"><div><span>Usuario</span><strong>@{user.username}</strong></div><div><span>Correo</span><strong>{user.email}</strong></div></div><div className="settings-action-list"><button onClick={()=>nav('/profile')}><UserRound size={18}/><div><strong>Editar perfil y metas</strong><span>Peso, altura, objetivo, actividad y avatar</span></div></button><button onClick={()=>nav('/notifications')}><Bell size={18}/><div><strong>Notificaciones</strong><span>Recordatorios y preferencias de correo</span></div></button></div></Card>
+ <Card><SectionTitle title="Privacidad" action={<LockKeyhole size={18}/>}/><p className="muted">Elegí exactamente qué pueden ver tus amigos.</p><div className="settings-list">{Object.entries(privacyLabels).map(([key,label])=><div key={key}><div><Eye size={18}/><span>{label}</span></div><select value={privacy[key]||'private'} onChange={e=>setPrivacy({...privacy,[key]:e.target.value})}><option value="private">Solo yo</option><option value="friends">Mis amigos</option></select></div>)}</div><button className="btn secondary" onClick={savePrivacy}>Guardar privacidad</button></Card>
+ <Card><SectionTitle title="Seguridad" action={<KeyRound size={18}/>}/><form className="form-stack" onSubmit={changePassword}><label>Contraseña actual<input type="password" value={password.currentPassword} onChange={e=>setPassword({...password,currentPassword:e.target.value})} placeholder="Ingrese su contraseña actual" required/></label><label>Nueva contraseña<input type="password" minLength="8" value={password.newPassword} onChange={e=>setPassword({...password,newPassword:e.target.value})} placeholder="Ingrese una nueva contraseña de mínimo 8 caracteres" required/></label><button className="btn secondary" disabled={busy}>{busy?'Actualizando...':'Cambiar contraseña'}</button></form></Card>
+ <Card><SectionTitle title="Sesión"/><button className="btn danger-outline" onClick={()=>{logout();nav('/auth')}}><LogOut size={18}/> Cerrar sesión</button></Card><SuccessAlert open={Boolean(success)} title="Configuración actualizada" text={success} onClose={()=>setSuccess('')}/></div>;
 }
