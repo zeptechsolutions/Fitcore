@@ -50,3 +50,4 @@
 /* Zhealth official logo */
 .brand-logo-button{gap:8px}.brand-logo-mark{width:35px;height:35px;object-fit:contain;display:block}.auth-brand-logo{height:82px;align-items:flex-start}.auth-brand-logo img{width:132px;height:auto;max-height:82px;object-fit:contain;object-position:left center;filter:drop-shadow(0 8px 20px rgba(19,0,61,.18))}.onboarding-logo-mark{width:50px;height:50px;object-fit:contain;display:block}.splash-logo{width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 10px 24px rgba(44,0,91,.18))}
 @media (min-width:800px){.auth-brand-logo img{width:155px}.brand-logo-mark{width:37px;height:37px}}
+.daily-goals-card{margin-top:2px}.goals-save{width:100%;margin-top:14px}.profile-save:disabled,.goals-save:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}

@@ -10,8 +10,9 @@ function rowMeters(row) {
 }
 
 export async function addActivity(req, res) {
-  const meters = Number(req.body.meters ?? req.body.distanceMeters);
-  if (!Number.isFinite(meters) || meters < 0) return res.status(400).json({ message: 'Ingresá una distancia válida en metros' });
+  const kmInput = req.body.distanceKm ?? req.body.kilometers;
+  const meters = kmInput !== undefined ? Number(kmInput) * 1000 : Number(req.body.meters ?? req.body.distanceMeters);
+  if (!Number.isFinite(meters) || meters < 0) return res.status(400).json({ message: 'Ingresá una distancia válida en kilómetros' });
   const user = await User.findById(req.user.id);
   const loggedAt = req.body.loggedAt ? new Date(req.body.loggedAt) : new Date();
   const { start, end } = dayRange(loggedAt);
